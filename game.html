@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { text-align:center; font-family:Arial; }
+    .card { border:2px solid black; width:250px; margin:20px auto; padding:20px; border-radius:8px; background:#f8f8f8; }
+    .role-good { color:blue; font-size:2em; font-weight:bold; }
+    .role-bad { color:red; font-size:2em; font-weight:bold; }
+    .alive-list { margin-top:20px; text-align:left; max-width:300px; margin-left:auto; margin-right:auto; }
+  </style>
+</head>
+<body>
+  <h1>🎭 玩家頁 - 剩餘身分</h1>
+  <div id="player-card"></div>
+  <div class="alive-list" id="alive-roles"></div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const playerId = Number(urlParams.get("player"));
+    const gameId = Number(urlParams.get("gameId"));
+    const cardDiv = document.getElementById("player-card");
+    const aliveDiv = document.getElementById("alive-roles");
+
+    if(!playerId || !gameId){
+      cardDiv.innerHTML = "<p>請從主持人頁打開</p>";
+    } else {
+      function refresh(){
+        google.script.run.withSuccessHandler(info=>{
+          if(!info){ cardDiv.innerHTML="<p>遊戲尚未建立</p>"; return; }
+
+          const player = info.player;
+          const allPlayers = info.players;
+
+          // 顯示自己角色
+          let roleClass = player.role==="狼人"?"role-bad":"role-good";
+          cardDiv.innerHTML = `<div class="card">
+            <h3>玩家 ${player.id}</h3>
+            <div class="${roleClass}">${player.role}</div>
+            <p>狀態：${player.alive?"存活":"死亡"}</p>
+          </div>`;
+
+          // 場上剩餘身分
+          const alivePlayers = allPlayers.filter(p=>p.alive);
+          aliveDiv.innerHTML = "<b>場上剩餘身分：</b><br>" + alivePlayers.map(p=>{
+            const color = p.role==="狼人"?"red":"blue";
+            return `<span style="color:${color}">玩家 ${p.id} (${p.role})</span>`;
+          }).join("<br>");
+
+        }).getPlayerInfo(gameId, playerId);
+      }
+
+      refresh();
+      setInterval(refresh,5000);
+    }
+  </script>
+</body>
+</html>
+aliveDiv.innerHTML += `<br><br><b>🏆 勝利方：${winner}</b>`;
