@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { text-align:center; font-family:Arial; }
+    input { width:60px; text-align:center; }
+    button { margin:5px; padding:6px 12px; }
+    .role-good { color:blue; font-weight:bold; }
+    .role-bad { color:red; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <h1>🐺 狼人殺 - 主持人頁</h1>
+  <p id="phase">目前階段：未開始</p>
+
+  <!-- 建立遊戲區 -->
+  <div>
+    玩家人數：<input id="count" type="number" value="8" min="4">
+    <button onclick="start()">開始遊戲</button>
+  </div>
+
+  <!-- 夜晚操作區 -->
+  <div style="margin-top:20px;">
+    <h3>夜晚操作</h3>
+    狼人殺人編號：
+    <input type="number" id="wolf">
+    <button onclick="wolf()">確認</button><br><br>
+
+    女巫救人編號：
+    <input type="number" id="save">
+    <button onclick="save()">確認</button><br><br>
+
+    女巫下毒編號：
+    <input type="number" id="poison">
+    <button onclick="poison()">確認</button><br><br>
+  </div>
+
+  <!-- 白天投票區 -->
+  <div style="margin-top:20px;">
+    <h3>白天投票 - 選擇要處決的玩家</h3>
+    投票玩家編號：
+    <input type="number" id="vote">
+    <button onclick="vote()">確認投票</button>
+  </div>
+
+  <!-- 主持人角色區 -->
+  <div style="margin-top:20px;">
+    <h3>所有玩家角色</h3>
+    <div id="all-roles"></div>
+  </div>
+
+  <!-- 勝利方 -->
+  <div style="margin-top:20px;">
+    <h3>🏆 勝利方：</h3>
+    <div id="winner"></div>
+  </div>
+
+  <script>
+    let gameId = 0;
+    let phase = "night"; // 初始夜晚
+    let gameOver = false;
+
+    function start(){
+      const count = Number(document.getElementById("count").value);
+      if(count < 4){ alert("至少4人才能開始遊戲"); return; }
+
+      google.script.run.withSuccessHandler(id=>{
+        gameId = id;
+        phase = "night";
+        gameOver = false;
+        updatePhase();
+        showAllRoles();
+        checkWinner();
+      }).createGame(count);
+    }
+
+    function updatePhase(){
+      document.getElementById("phase").innerText = "目前階段：" + (phase==="night"?"🌙 夜晚":"☀️ 白天");
+    }
+
+    function switchPhase(){
+      if(gameOver) return;
+      phase = (phase==="night")?"day":"night";
+      updatePhase();
+      showAllRoles();
+    }
+
+    function showAllRoles(){
+      if(!gameId) return;
+      google.script.run.withSuccessHandler(game=>{
+        const container = document.getElementById("all-roles");
+        container.innerHTML = "";
+        game.players.forEach(p=>{
+          const roleClass = p.role==="狼人"?"role-bad":"role-good";
+          container.innerHTML += `玩家 ${p.id}: <span class="${roleClass}">${p.role}</span> (${p.alive?"存活":"死亡"})<br>`;
+        });
+      }).getGame(gameId);
+    }
+
+    function checkWinner(){
+      if(!gameId) return;
+      google.script.run.withSuccessHandler(winner=>{
+        if(winner){
+          document.getElementById("winner").innerHTML = `<b>${winner}</b>`;
+          gameOver = true;
+        } else {
+          setTimeout(checkWinner,2000); // 每2秒檢查一次
+        }
+      }).checkWinner(gameId);
+    }
+
+    // ---------------- 夜晚操作 ----------------
+    function wolf(){
+      if(gameOver) return;
+      const target = Number(document.getElementById("wolf").value);
+      if(!target){alert("請輸入編號"); return;}
+      google.script.run.wolfKill(gameId,target);
+      alert("狼人殺人完成");
+      showAllRoles();
+      switchPhase();
+    }
+
+    function save(){
+      if(gameOver) return;
+      const target = Number(document.getElementById("save").value);
+      if(!target){alert("請輸入編號"); return;}
+      google.script.run.witchSave(gameId,target);
+      alert("女巫救人完成");
+      showAllRoles();
+    }
+
+    function poison(){
+      if(gameOver) return;
+      const target = Number(document.getElementById("poison").value);
+      if(!target){alert("請輸入編號"); return;}
+      google.script.run.witchPoison(gameId,target);
+      alert("女巫下毒完成");
+      showAllRoles();
+    }
+
+    // ---------------- 白天投票 ----------------
+    function vote(){
+      if(gameOver) return;
+      const target = Number(document.getElementById("vote").value);
+      if(!target){alert("請輸入編號"); return;}
+      google.script.run.wolfKill(gameId,target);
+      alert("投票結束，玩家 "+target+" 被處決");
+      showAllRoles();
+      switchPhase();
+    }
+  </script>
+</body>
+</html>
